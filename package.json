@@ -1,0 +1,22 @@
+{
+  "name": "json-tools",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon --watch src/main/index.ts --exec electron ./out/main/index.js",
+    "debug": "electron --inspect=5858 ./out/main/index.js",
+    "dev:main": "tsc -p ./tsconfig.json -w",
+    "build:main": "tsc -p ./tsconfig.json"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^12.12.7",
+    "electron": "^7.1.1",
+    "node-xlsx": "^0.15.0",
+    "nodemon": "^1.19.4",
+    "typescript": "3.6.2"
+  }
+}

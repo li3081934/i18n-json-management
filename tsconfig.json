@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "outDir": "./out/main",      // 输出目录, 同渲染线程放在一起
+    "sourceMap": true,         // 调试时需要
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "target": "es6",         // 输出代码版本, 由于在Node中运行, es6没问题
+    "module": "commonjs",    // module 处理方式
+    "typeRoots": [            // .d.ts 目录
+      "../node_modules/@types"
+    ],
+    "lib": [                // 可选, 添加新的语法支持
+      "es2017",
+      "dom",
+      "dom.iterable"
+    ]
+  },
+  "exclude": [                    // 排除渲染线程目录
+    "./src/renderer"
+  ],
+  "include": [
+    "./src/main"
+  ]
+}
