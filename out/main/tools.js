@@ -60,4 +60,25 @@ function getValueByKey(obj, key) {
     return res;
 }
 exports.getValueByKey = getValueByKey;
+function parseToJsonObj(keyVal) {
+    let res = {};
+    keyVal.forEach(item => {
+        p(res, item.key.split('.'), item.value);
+    });
+    function p(obj, keyArr, value) {
+        let key = keyArr.shift();
+        if (!keyArr.length) {
+            obj[key] = value;
+        }
+        else {
+            if (!obj[key]) {
+                obj[key] = {};
+            }
+            obj = obj[key];
+            p(obj, keyArr, value);
+        }
+    }
+    return res;
+}
+exports.parseToJsonObj = parseToJsonObj;
 //# sourceMappingURL=tools.js.map

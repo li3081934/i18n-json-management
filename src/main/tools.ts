@@ -1,11 +1,14 @@
+import { Dir } from "./index.interface";
+
 const fs = require('fs');
 const path = require('path');
 
-function saveFile(dir, fileName, file) {
+function saveFile(dir: string, fileName: string, file: Buffer) {
     if(!fs.existsSync(dir)){
         fs.mkdirSync(dir);
     }
     fs.writeFile(path.join(dir, fileName), file, (err) => {
+
         if (err) throw err;
         console.log(fileName + ' has been saved! In ' + dir);
     })
@@ -56,4 +59,24 @@ function getValueByKey(obj: {[key: string]: any}, key:string) {
     }
     return res
 }
-export { saveFile, readJSONSync, flatObject, getValueByKey }
+
+function parseToJsonObj (keyVal: {key: string, value: string}[]): Dir<any> {
+    let res = {}
+    keyVal.forEach(item => {
+        p(res, item.key.split('.'), item.value)
+    })
+    function p (obj: Dir<any>, keyArr: string[], value: any) {
+        let key = keyArr.shift()
+        if (!keyArr.length) {
+            obj[key] = value
+        } else {
+            if (!obj[key]) {
+                obj[key] = {}
+            }
+            obj = obj[key]
+            p(obj, keyArr, value)
+        }
+    }
+    return res
+}
+export { saveFile, readJSONSync, flatObject, getValueByKey, parseToJsonObj }

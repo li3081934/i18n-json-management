@@ -30,14 +30,45 @@
     })
     
     grid.addEventListener('endedit', (event) => {
-      sendTableData()
+        sendTableData(grid.schema[event.cell.columnIndex].name)
+        
     })
-    function sendTableData () {
-      ipcRenderer.send('get-tableData', grid.data)
-    }
     ipcRenderer.on('log', (event, arg) => {
+        console.log('主线程打印')
         console.log(arg)
     })
+    function sendTableData (updateColum) {
+        ipcRenderer.send('get-tableData', {
+            tableData: grid.data,
+            updateColum
+        })
+    }
+</script>
+<script>
+  ipcRenderer.send('scriptReady', true)
+  
+  function parseToJsonObj (keyVal) {
+      
+    let res = {}
+    keyVal.forEach(item => {
+        p(res, item.key.split('.'), item.value)
+    })
+    function p (obj, keyArr, value) {
+        debugger
+        let key = keyArr.shift()
+        if (!keyArr.length) {
+            obj[key] = value
+        } else {
+            if (!obj[key]) {
+                obj[key] = {}
+            }
+            obj = obj[key]
+            p(obj, keyArr, value)
+        }
+    }
+    return res
+}
+parseToJsonObj([{key: 'a.b', value: '1'}])
 </script>
 </body>
 </html>

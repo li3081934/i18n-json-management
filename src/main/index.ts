@@ -1,17 +1,30 @@
 // const { app, BrowserWindow, Menu, dialog } = require('electron')
 // const { readJSONSync, saveFile, flatObject } = require('./tools.js')
 import { app, BrowserWindow, Menu, dialog, ipcMain } from 'electron'
-import { readJSONSync, saveFile, flatObject, getValueByKey } from './tools'
+import { readJSONSync, saveFile, flatObject, getValueByKey, parseToJsonObj } from './tools'
+import * as fs from 'fs'
 import * as path from 'path'
+import xlsx from 'node-xlsx';
+import { Config } from './index.interface';
 // 保持对window对象的全局引用，如果不这么做的话，当JavaScript对象被
 // 垃圾回收的时候，window对象将会自动的关闭
 
-let win
+let win!: BrowserWindow
 // global.sharedObject = {
 //     tableData: []
 // }
 let tableData = []
 let schema: { name: string }[] = [ { name: 'key'}]
+const appPath = app.getPath('appData')
+const appName = 'json-tools'
+const configFileName = 'config.json'
+let config: Config = {
+    base: {
+        name: '',
+        path: ''
+    },
+    other: []
+}
 function createWindow () {
     // 创建浏览器窗口。
     win = new BrowserWindow({
@@ -49,16 +62,13 @@ function initMenu () {
                                 { name: 'Custom File Type', extensions: ['json'] },
                             ]
                         })[0]
-                        let { name, json } = readJSONSync(baseJsonPath)
-                        schema = [ ...schema, { name } ]
-                        let res = flatObject(json)
-                        tableData = res.map(item => {
-                            return {
-                                key: item.key,
-                                [name]: item.value
-                            }
-                        })
-                        sendDataToRender()
+                        importBasejson (baseJsonPath)
+                        let name = path.parse(baseJsonPath).base
+                        config.base = {
+                            name,
+                            path: baseJsonPath
+                        }
+                        saveConfig()
                     }
                 },
                 {
@@ -70,14 +80,15 @@ function initMenu () {
                                 { name: 'Custom File Type', extensions: ['json'] },
                             ]
                         })
-                        otherJsonPath.forEach(path => {
-                            let { name, json } = readJSONSync(path)
-                            schema.push({name})
-                            tableData.forEach(item => {
-                                item[name] = getValueByKey(json, item.key)
-                            })
+                        config.other = otherJsonPath.map(jsonPath => {
+                            let { base } = path.parse(jsonPath)
+                            return {
+                                name: base,
+                                path: jsonPath
+                            }
                         })
-                        sendDataToRender()
+                        importOtherJson(otherJsonPath)
+                        saveConfig()
                     }
                 },
                 {
@@ -86,10 +97,25 @@ function initMenu () {
                 {
                     label: '导出excel',
                     click: (menuItem, browserWindow, event) => {
-                        let outPutFolder = dialog.showOpenDialogSync({
-                            properties: ['openDirectory'],
-                        })[0]
-                        console.log(outPutFolder)
+                        let outPutPath= dialog.showSaveDialogSync({
+                            // properties: ['openDirectory'],
+                            filters: [
+                                { name: 'excel', extensions: ['xls'] },
+                            ]
+                        })
+                        if (outPutPath) {
+                            let outPutPathArr = outPutPath.split('\\')
+                            let fileName = outPutPathArr.pop()
+                            let dir = outPutPathArr.join('\\')
+                            let header = schema.map(item => item.name)
+                            let body = tableData.map(item => {
+                                return header.map(head => item[head])
+                            })
+                            // printLog(outPutFolder)
+                            let excelBuff = xlsx.build([{name: "translation", data: [header, ...body]}])
+                            saveFile(dir, fileName, excelBuff)
+                        }
+                        
                     }
                 },
                 {
@@ -110,14 +136,23 @@ function initMenu () {
 }
 
 ipcMain.on('get-tableData', (event, arg) => {
-    tableData = arg
+    // printLog(arg)
+    tableData = arg.tableData
+    saveJson(arg.updateColum)
+})
+ipcMain.on('scriptReady', (event, arg) => {
+    if (tableData.length) {
+        sendDataToRender()
+    }
 })
 // Electron 会在初始化后并准备
 // 创建浏览器窗口时，调用这个函数。
 // 部分 API 在 ready 事件触发后才能使用。
 app.on('ready', () => {
-    createWindow()
+    initConfig()
+    initTableData()
     initMenu()
+    createWindow()
 })
 
 // 当全部窗口关闭时退出。
@@ -138,12 +173,89 @@ app.on('activate', () => {
 })
 
 function sendDataToRender() {
-    win.webContents.send('baseJson-load', {
-        table: tableData,
-        schema: schema
-    })
+    if (win && win.webContents) {
+        win.webContents.send('baseJson-load', {
+            table: tableData,
+            schema: schema
+        })
+    }
+
 }
 
 function printLog (log: any) {
-    win.webContents.send('log', log)
+    if (win && win.webContents) {
+        win.webContents.send('log', log)
+    }
+}
+
+function initConfig () {
+    let configPath = path.join(appPath, appName, configFileName)
+    if (fs.existsSync(configPath)) {
+        config = readJSONSync(configPath).json
+        return
+    }
+}
+
+function saveConfig () {
+    saveFile(path.join(appPath, appName), configFileName, Buffer.from(JSON.stringify(config)))
+}
+
+function initTableData () {
+    if (config.base.path) {
+        importBasejson(config.base.path)
+    }
+    if (config.other && config.other.length) {
+        importOtherJson(config.other.map(item => item.path))
+    }
+}
+
+function importBasejson (baseJsonPath: string) {
+    let { name, json } = readJSONSync(baseJsonPath)
+    schema = [ ...schema, { name } ]
+    let res = flatObject(json)
+    tableData = res.map(item => {
+        return {
+            key: item.key,
+            [name]: item.value
+        }
+    })
+    
+    sendDataToRender()
+}
+function importOtherJson (otherJsonPath: string[]) {
+    otherJsonPath.forEach(path => {
+        let { name, json } = readJSONSync(path)
+        schema.push({name})
+        tableData.forEach(item => {
+            item[name] = getValueByKey(json, item.key)
+        })
+    })
+    sendDataToRender()
+}
+
+function saveJson (updateColum: string) {
+    let columData = tableData.map(item => {
+        return {
+            key: item.key,
+            value: item[updateColum]
+        }
+    })
+    let jsonData = parseToJsonObj(columData)
+    let path = findPathByName(updateColum)
+    if (path) {
+        saveFile(path, updateColum, Buffer.from(JSON.stringify(jsonData)))
+    }
+    
+}
+
+function findPathByName (name: string): string {
+    let filePath = ''
+    if (name === config.base.name) {
+        filePath = config.base.path
+    }
+    let res = config.other.find(item => item.name === name)
+    if (res) {
+        filePath = res.path
+    }
+    return path.parse(filePath).dir
 }
