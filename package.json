@@ -1,6 +1,6 @@
 {
-  "name": "json-tools",
-  "productName": "json-tools",
+  "name": "i18n-json-management",
+  "productName": "i18n-json-management",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

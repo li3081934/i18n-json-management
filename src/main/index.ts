@@ -16,7 +16,7 @@ let win!: BrowserWindow
 let tableData = []
 let schema: { name: string }[] = [ { name: 'key'}]
 const appPath = app.getPath('appData')
-const appName = 'json-tools'
+const appName = 'i18n-json-management'
 const configFileName = 'config.json'
 let config: Config = {
     base: {
