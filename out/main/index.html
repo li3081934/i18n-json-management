@@ -23,10 +23,15 @@
     });
     grid.style.height = '100%';
     grid.style.width = '100%';
+    grid.addEventListener('rendercell', function (e) {
+        if (!e.cell.value && e.cell.rowIndex > -1) {
+            e.ctx.fillStyle = 'rgba(255, 165, 0, 0.15)';
+        }
+    });
     // document.body.appendChild(grid);
     ipcRenderer.on('baseJson-load', (event, arg) => {
         grid.data = arg.table
-        grid.schema = arg.schema
+        grid.schema = arg.schema.map(item => ({ ...item, width: 100}))
     })
     
     grid.addEventListener('endedit', (event) => {
@@ -46,29 +51,6 @@
 </script>
 <script>
   ipcRenderer.send('scriptReady', true)
-  
-  function parseToJsonObj (keyVal) {
-      
-    let res = {}
-    keyVal.forEach(item => {
-        p(res, item.key.split('.'), item.value)
-    })
-    function p (obj, keyArr, value) {
-        debugger
-        let key = keyArr.shift()
-        if (!keyArr.length) {
-            obj[key] = value
-        } else {
-            if (!obj[key]) {
-                obj[key] = {}
-            }
-            obj = obj[key]
-            p(obj, keyArr, value)
-        }
-    }
-    return res
-}
-parseToJsonObj([{key: 'a.b', value: '1'}])
 </script>
 </body>
 </html>

@@ -116,6 +116,29 @@ function initMenu() {
                     }
                 },
                 {
+                    label: '导出未翻译',
+                    click: (menuItem, browserWindow, event) => {
+                        let outPutPath = electron_1.dialog.showSaveDialogSync({
+                            // properties: ['openDirectory'],
+                            filters: [
+                                { name: 'excel', extensions: ['xls'] },
+                            ]
+                        });
+                        if (outPutPath) {
+                            let outPutPathArr = outPutPath.split('\\');
+                            let fileName = outPutPathArr.pop();
+                            let dir = outPutPathArr.join('\\');
+                            let header = schema.map(item => item.name);
+                            let body = tableData.map(item => {
+                                return header.map(head => item[head]);
+                            }).filter(item => Object.values(item).some(val => !val));
+                            // printLog(outPutFolder)
+                            let excelBuff = node_xlsx_1.default.build([{ name: "untranslation", data: [header, ...body] }]);
+                            tools_1.saveFile(dir, fileName, excelBuff);
+                        }
+                    }
+                },
+                {
                     type: 'separator'
                 },
                 {

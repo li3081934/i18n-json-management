@@ -119,6 +119,30 @@ function initMenu () {
                     }
                 },
                 {
+                    label: '导出未翻译',
+                    click: (menuItem, browserWindow, event) => {
+                        let outPutPath= dialog.showSaveDialogSync({
+                            // properties: ['openDirectory'],
+                            filters: [
+                                { name: 'excel', extensions: ['xls'] },
+                            ]
+                        })
+                        if (outPutPath) {
+                            let outPutPathArr = outPutPath.split('\\')
+                            let fileName = outPutPathArr.pop()
+                            let dir = outPutPathArr.join('\\')
+                            let header = schema.map(item => item.name)
+                            let body = tableData.map(item => {
+                                return header.map(head => item[head])
+                            }).filter(item => Object.values(item).some(val => !val))
+                            // printLog(outPutFolder)
+                            let excelBuff = xlsx.build([{name: "untranslation", data: [header, ...body]}])
+                            saveFile(dir, fileName, excelBuff)
+                        }
+                        
+                    }
+                },
+                {
                     type: 'separator'
                 },
                 {
